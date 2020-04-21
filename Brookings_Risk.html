@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Data join with feature state</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v1.7.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v1.7.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://d3js.org/d3-dsv.v1.min.js"></script>
+  <script src="https://d3js.org/d3-fetch.v1.min.js"></script>
+  <script src="https://d3js.org/d3-format.v1.min.js"></script>
+
+  <style>
+    body { margin: 0; padding: 0; }
+	#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+
+<body>
+  <div id="map"></div>
+</body>
+<script type="text/javascript">
+
+  mapboxgl.accessToken = 'pk.eyJ1Ijoiamprb2hlciIsImEiOiJjanhtM3JncHIwMjY4M3BtbXV0Z2dvZzg0In0._o4vt3R-MDgSonaoHMmk8w';
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/jjkoher/ck98yt8at0djb1iqqo708z1k4/draft',
+    zoom: mobile_detect(),
+    center: [-77.691, 41.007]
+  });
+
+  let hoveredStateId = null;
+
+  const popup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false
+  });
+
+  map.on('load', () => {
+
+    d3.csv("https://raw.githubusercontent.com/jjkohler/COVID19/master/Brookings_pct_puma.csv").then((data) => {
+      initFeatureState(data)
+    });
+
+    const initFeatureState = (data) => {
+      map.addSource('puma_pa', {
+        type: 'vector',
+        url: 'mapbox://jjkoher.1vmkccs1',
+        promoteId: 'GEOID10'
+      });
+
+
+      map.addLayer({
+        'id': 'puma_pa-fill',
+        'type': 'fill',
+        'source': 'puma_pa',
+        'source-layer': 'puma_pa',
+        'paint': {
+          'fill-color': ['case',
+            ['!=', ['feature-state', 'Pct_Risk'], null],
+            ['interpolate',
+              ['linear'],
+              ['to-number', ['feature-state', 'Pct_Risk']],
+              0.16, 'white',
+              // 5, '#a6bddb',
+              0.32, 'crimson'
+            ],
+            'rgb(140, 140, 140)'
+          ],
+		  "fill-opacity": 0.7
+        }
+      }, 'waterway-label');
+
+      map.addLayer({
+        'id': 'puma_pa-line',
+        'type': 'line',
+        'source': 'puma_pa',
+        'source-layer': 'puma_pa',
+        'layout': {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        'paint': {
+          'line-color': '#4b4b4b',
+          'line-width': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            2,
+            0
+          ]
+        }
+      });
+
+      map.on('mousemove', 'puma_pa-fill', (e) => {
+        if (e.features.length > 0) {
+          if (hoveredStateId) {
+            map.setFeatureState({
+              source: 'puma_pa',
+              'sourceLayer': 'puma_pa',
+              id: hoveredStateId
+            }, {
+              hover: false
+            });
+          }
+          hoveredStateId = e.features[0].id;
+          map.setFeatureState({
+            source: 'puma_pa',
+            'sourceLayer': 'puma_pa',
+            id: hoveredStateId
+          }, {
+            hover: true
+          });
+        }
+      });
+
+
+
+      map.on('mousemove', 'puma_pa-fill', (e) => {
+
+        map.getCanvas().style.cursor = 'pointer';
+        const description = `
+        <p>Name: ${e.features[0].properties.NAMELSAD10}</p>
+        <p>Working Population: ${d3.format("(.0f")(e.features[0].state.Total_Wrk)}</p>
+        <p>PUMA ID: ${e.features[0].id}</p>
+        <p>Percent Jobs at Risk:  ${d3.format("(.1f")(e.features[0].state.Pct_Risk*100)}%</p>`;
+	      
+        popup
+          .setLngLat(e.lngLat)
+          .setHTML(description)
+          .addTo(map);
+      });
+
+      map.on('mouseleave', 'puma_pa-fill', () => {
+        if (hoveredStateId) {
+          map.setFeatureState({
+            source: 'puma_pa',
+            'sourceLayer': 'puma_pa',
+            id: hoveredStateId
+          }, {
+            hover: false
+          });
+        }
+        hoveredStateId = null;
+        map.getCanvas().style.cursor = '';
+        popup.remove();
+      });
+
+
+      const setStates = (data) => {
+        data.forEach((row) => {
+          map.setFeatureState({
+            source: 'puma_pa',
+            'sourceLayer': 'puma_pa',
+            id: row.GEOID10
+          }, {
+            Pct_Risk: row.Pct_Risk,
+			Total_Wrk: row.Total_Wrk
+          })
+        })
+      }
+
+      const setAfterLoad = (e) => {
+        if (e.sourceId === 'puma_pa' && e.isSourceLoaded) {
+          setStates(data);
+          map.off('sourcedata', setAfterLoad);
+        }
+      }
+
+      if (map.isSourceLoaded('puma_pa')) {
+        setStates(data);
+      } else {
+        map.on('sourcedata', setAfterLoad);
+      }
+    }
+  })
+  
+  function mobile_detect() {
+
+if (navigator.userAgent.match(/Mobile/)) {return 5.5;
+}
+else {
+return 7.5;
+}
+}
+  
+</script>
+</html>
