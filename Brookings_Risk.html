@@ -33,7 +33,7 @@
 
   const popup = new mapboxgl.Popup({
     closeButton: false,
-    closeOnClick: false
+    closeOnClick: true
   });
 
   map.on('load', () => {
@@ -45,7 +45,7 @@
     const initFeatureState = (data) => {
       map.addSource('puma_pa', {
         type: 'vector',
-        url: 'mapbox://jjkoher.1vmkccs1',
+        url: 'mapbox://jjkoher.8nbsc555',
         promoteId: 'GEOID10'
       });
 
