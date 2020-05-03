@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Data join with feature state</title>
+  <title>PA Employment Risk</title>
   <script src="mapbox-gl.js"></script>
   <link href="mapbox-gl.css" rel="stylesheet" />
   <script src="d3-dsv.v1.min.js"></script>
   <script src="d3-fetch.v1.min.js"></script>
   <script src="d3-format.v1.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;500;700;900&display=swap" rel="stylesheet">
 
   <style>
     body { margin: 0; padding: 0; }
@@ -17,8 +18,109 @@
 </head>
 
 <body>
-  <div id="map"></div>
-</body>
+<style>
+
+.map-overlay {
+font-family: 'Roboto', sans-serif;
+font-weight: 300;
+position: absolute;
+width: 250px;
+top: 0;
+left: 0;
+padding: 10px;
+}
+
+.map-overlay .map-overlay-title {
+font-size: 20px;
+font-weight: 700;
+color: #F7F9F9;
+background-color: #343332;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+border-radius: 0px;
+padding: 10px;
+opacity: .95;
+}
+ 
+.map-overlay .map-overlay-inner {
+height: 60px;
+background-color: DimGray;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+border-radius: 0px;
+padding: 10px;
+margin-bottom: 0px;
+opacity: 0.95;
+}
+
+.map-overlay .map-overlay-hover {
+height: 260px;
+background-color: #F7F9F9;
+color: #343332;
+font-weight: 300;
+box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+border-radius: 0px;
+padding: 10px;
+opacity: .95;
+}
+ 
+.map-overlay-inner fieldset {
+border: none;
+padding: 0;
+margin: 0 0 10px;
+opacity: 1.0;
+}
+ 
+.map-overlay-inner fieldset:last-child {
+margin: 10;
+opacity: 1.0;
+}
+ 
+.map-overlay-inner select {
+font-family: 'Roboto', sans-serif;
+width: 100%;
+}
+ 
+.map-overlay-inner label {
+display: block;
+color: white;
+margin: 0 0 8px;
+}
+
+
+ 
+
+</style>
+ 
+<div id="map">
+</div>
+
+<div class="map-overlay">
+	<div class="map-overlay-title"><p>Employment Risk by PUMA</p>
+	</div>
+	<div class="map-overlay-inner">
+		<fieldset>
+		<label>Select layer</label>
+		<select id="layer" name="layer">
+			<option value="water">Total Employment Risk</option>
+			<option value="building">Black Employment Risk</option>
+			<option value="building">Non-Black Employment Risk</option>
+		</select>
+		</fieldset>
+	</div>
+	<div class= "map-overlay-hover">
+
+		<div id ='description'></div>
+		<div><strong>Name:</strong></div>
+		<div><span id='name'></span></div><br>
+		<div><strong>Working Population:</strong></div>
+		<div><span id='working'></span></div><br>
+		<div><strong>PUMA ID:</strong></div>
+		<div><span id='pumaid'></span></div><br>
+		<div><strong>Percent Jobs at Risk:</strong></div>
+		<div><span id='risk'></span></div>
+
+	</div>
+</div>
+
 <script type="text/javascript">
 
   mapboxgl.accessToken = 'pk.eyJ1Ijoiamprb2hlciIsImEiOiJjanhtM3JncHIwMjY4M3BtbXV0Z2dvZzg0In0._o4vt3R-MDgSonaoHMmk8w';
@@ -91,6 +193,8 @@
         }
       });
 
+
+
       map.on('mousemove', 'puma_pa-fill', (e) => {
         if (e.features.length > 0) {
           if (hoveredStateId) {
@@ -113,27 +217,44 @@
         }
       });
 
+map.on('mousemove', 'puma_pa-fill', (e) => {
 
+  map.getCanvas().style.cursor = 'pointer';
+  // Set variables equal to the current feature's magnitude, location, and time
+  var PUMANAME = (e.features[0].properties.NAMELSAD10).slice(0, -5);
+  var WRK = e.features[0].state.Total_Wrk;
+  var PUMA_ID = e.features[0].id;
+  var RSK_PCT = (e.features[0].state.Pct_Risk*100).toFixed(2)+"%";
 
-      map.on('mousemove', 'puma_pa-fill', (e) => {
+  // Check whether features exist
+  if (e.features.length > 0) {
+    // Display the magnitude, location, and time in the sidebar
+    nameDisplay.textContent = PUMANAME;
+    workingDisplay.textContent = WRK;
+    pumaidDisplay.textContent = PUMA_ID;
+	riskDisplay.textContent = RSK_PCT;
+	}
+	});
 
-        map.getCanvas().style.cursor = 'pointer';
-        const description = `
-        <p>Name: ${e.features[0].properties.NAMELSAD10}</p>
-        <p>Working Population: ${d3.format("(.0f")(e.features[0].state.Total_Wrk)}</p>
-        <p>PUMA ID: ${e.features[0].id}</p>
-        <p>Percent Jobs at Risk:  ${d3.format("(.1f")(e.features[0].state.Pct_Risk*100)}%</p>`;
+      <!-- map.on('mousemove', 'puma_pa-fill', (e) => { -->
+
+        <!-- map.getCanvas().style.cursor = 'pointer'; -->
+        <!-- const description = ` -->
+        <!-- <p>Name: ${e.features[0].properties.NAMELSAD10}</p> -->
+        <!-- <p>Working Population: ${d3.format("(.0f")(e.features[0].state.Total_Wrk)}</p> -->
+        <!-- <p>PUMA ID: ${e.features[0].id}</p> -->
+        <!-- <p>Percent Jobs at Risk:  ${d3.format("(.1f")(e.features[0].state.Pct_Risk*100)}%</p>`; -->
 	      
-        popup
-          .setLngLat(e.lngLat)
-          .setHTML(description)
-          .addTo(map);
-      });
+        <!-- popup -->
+          <!-- .setLngLat(e.lngLat) -->
+          <!-- .setHTML(description) -->
+          <!-- .addTo(map); -->
+      <!-- }); -->
 
       map.on('mouseleave', 'puma_pa-fill', () => {
         if (hoveredStateId) {
           map.setFeatureState({
-            source: 'puma_pa',
+            source: 'puma_pa', 
             'sourceLayer': 'puma_pa',
             id: hoveredStateId
           }, {
@@ -142,7 +263,11 @@
         }
         hoveredStateId = null;
         map.getCanvas().style.cursor = '';
-        popup.remove();
+		nameDisplay.textContent = null;
+		workingDisplay.textContent = null;
+		pumaidDisplay.textContent = null;
+		riskDisplay.textContent = null;
+        <!-- popup.remove(); -->
       });
 
 
@@ -174,7 +299,7 @@
     }
   })
   
-  function mobile_detect() {
+function mobile_detect() {
 
 if (navigator.userAgent.match(/Mobile/)) {return 5.5;
 }
@@ -182,6 +307,58 @@ else {
 return 7;
 }
 }
-  
+var nameDisplay = document.getElementById('name');
+var workingDisplay = document.getElementById('working');
+var pumaidDisplay = document.getElementById('pumaid');
+var riskDisplay = document.getElementById('risk');
+
+<!-- var state_ID = null; -->
+
+<!-- map.on('mousemove', 'puma_pa-fill', (e) => { -->
+
+  <!-- map.getCanvas().style.cursor = 'pointer'; -->
+  <!-- // Set variables equal to the current feature's magnitude, location, and time -->
+  <!-- var PUMANAME = e.features[0].properties.NAMELSAD10; -->
+  <!-- var WRK = e.features[0].state.Total_Wrk; -->
+  <!-- var PUMA_ID = e.features[0].id; -->
+  <!-- var RSK_PCT = e.features[0].state.Pct_Risk; -->
+
+  <!-- // Check whether features exist -->
+  <!-- if (e.features.length > 0) { -->
+    <!-- // Display the magnitude, location, and time in the sidebar -->
+    <!-- nameDisplay.textContent = PUMANAME; -->
+    <!-- workingDisplay.textContent = WRK; -->
+    <!-- pumaidDisplay.textContent = PUMA_ID; -->
+	<!-- riskDisplay.textContent = RSK_PCT; -->
+
+    // If quakeID for the hovered feature is not null,
+    // use removeFeatureState to reset to the default behavior
+    <!-- if (hoveredStateId) { -->
+      <!-- map.removeFeatureState({ -->
+        <!-- source: "puma_pa", -->
+        <!-- id: hoveredStateId -->
+      <!-- }); -->
+    <!-- } -->
+
+    <!-- hoveredStateId = e.features[0].id; -->
+
+    <!-- // When the mouse moves over the earthquakes-viz layer, update the -->
+    <!-- // feature state for the feature under the mouse -->
+    <!-- map.setFeatureState({ -->
+      <!-- source: 'puma_pa', -->
+      <!-- id: hoveredStateId, -->
+    <!-- }, { -->
+      <!-- hover: true -->
+    <!-- }); -->
+
+  <!-- } -->
+  <!-- else { -->
+  <!-- nameDisplay.textContent = ""; -->
+    <!-- workingDisplay.textContent = ""; -->
+    <!-- pumaidDisplay.textContent = ""; -->
+	<!-- riskDisplay.textContent = ""; -->
+  <!-- } -->
+<!-- }); -->
 </script>
+</body>
 </html>
