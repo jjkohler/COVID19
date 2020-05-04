@@ -144,7 +144,13 @@ opacity: .95;
 		<div><strong>Percent Jobs at Risk:</strong></div>
 		<div><span id='risk'></span><br><span id='blk_risk'></span><br><span id='non_risk'></span></div>
 		</div>
-		<div class='notification' id='hover_text'><strong>Hover over Map for Info</strong></div>
+		<div class='notification' id='hover_text'><strong>Hover over Map for Info</strong>
+		<script>//this js exists for sensing mobile and displaying different initial text
+if (navigator.userAgent.match(/Mobile/)) {
+document.getElementById('hover_text').innerHTML = 'Touch Map for Info';
+}
+</script>
+		</div>
 	
 	</div>
 	<div class='map-overlay-legend' id='legend'></div>
@@ -160,23 +166,29 @@ opacity: .95;
     center: [-77.691, 41.007]
   });
 
-  let hoveredStateId = null;
-  
+//initialize variables and define functions
+let hoveredStateId = null;
 var layers = ['14% at Risk', '32% at Risk'];
 var colors = ['white', 'crimson'];  
+var layer_name = 'Total_Pct_Risk';
+var nameDisplay = document.getElementById('name');
+var workingDisplay = document.getElementById('working');
+var pumaidDisplay = document.getElementById('pumaid');
+var riskDisplay = document.getElementById('risk');
+var blk_riskDisplay = document.getElementById('blk_risk');
+var non_riskDisplay = document.getElementById('non_risk');
 
+//function for updating map when layer is chosen by user
 function map_update() {
     var x = String(document.getElementById("layer").value);
 	console.log(x);
     map.setPaintProperty('puma_pa-fill', 'fill-color', fill_color(x));
 	updatelegend(layers, colors)
 };
-var layer_name = 'Total_Pct_Risk';
 
+//function for updating legend when layer is changed
 function updatelegend(l,c) {
-document.getElementById('legend').innerHTML = "";
-
-console.log(l);
+document.getElementById('legend').innerHTML = ""; //this keeps the legends from getting appended infinitely. Important.
 for (i = 0; i < l.length; i++) {
   var layer = l[i];
   var color = c[i];
@@ -193,6 +205,7 @@ for (i = 0; i < l.length; i++) {
 }
 };
 
+//Function for updated color based on cases of user input. Very hard coded. This could probably be more generalized in the future.
 function fill_color(input) {
 
 if (input == 'Total_Pct_Risk') {
@@ -209,8 +222,6 @@ if (input == 'Total_Pct_Risk') {
             ],
             'rgb(140, 140, 140)'
           ];
-
-
 }
 else if (input == 'Blk_Pct_Risk') {
 		layers = ['0% Black at Risk', '80% Black at Risk'];
@@ -226,8 +237,6 @@ else if (input == 'Blk_Pct_Risk') {
             ],
             'rgb(140, 140, 140)'
           ];
-
-		  
 }
 else {layers = ['13% Non Black at Risk', '42% Non Black at Risk'];
 		colors = ['white', 'green'];
@@ -243,11 +252,9 @@ else {layers = ['13% Non Black at Risk', '42% Non Black at Risk'];
             'rgb(140, 140, 140)'
           ];
 }
-
 };
 
-
-
+//Initial legend creation when map is first drawn
 for (i = 0; i < layers.length; i++) {
   var layer = layers[i];
   var color = colors[i];
@@ -263,21 +270,13 @@ for (i = 0; i < layers.length; i++) {
   legend.appendChild(item);
 }
 
-
-
-var nameDisplay = document.getElementById('name');
-var workingDisplay = document.getElementById('working');
-var pumaidDisplay = document.getElementById('pumaid');
-var riskDisplay = document.getElementById('risk');
-var blk_riskDisplay = document.getElementById('blk_risk');
-var non_riskDisplay = document.getElementById('non_risk');
-
+//load CSV data
   map.on('load', () => {
 
     d3.csv("https://raw.githubusercontent.com/jjkohler/COVID19/master/puma_pct_data.csv").then((data) => {
       initFeatureState(data)
     });
-
+//load vector tiles
     const initFeatureState = (data) => {
       map.addSource('puma_pa', {
         type: 'vector',
@@ -285,7 +284,7 @@ var non_riskDisplay = document.getElementById('non_risk');
         promoteId: 'GEOID10'
       });
 
-
+//draw layer for filled areas
       map.addLayer({
         'id': 'puma_pa-fill',
         'type': 'fill',
@@ -296,7 +295,7 @@ var non_riskDisplay = document.getElementById('non_risk');
 		  "fill-opacity": 0.7
         }
       }, 'waterway-label');
-
+//layer for outlines
       map.addLayer({
         'id': 'puma_pa-line',
         'type': 'line',
@@ -316,7 +315,7 @@ var non_riskDisplay = document.getElementById('non_risk');
           ]
         }
       });
-
+//detect mouse hover behavior
       map.on('mousemove', 'puma_pa-fill', (e) => {
         if (e.features.length > 0) {
           if (hoveredStateId) {
@@ -342,7 +341,7 @@ var non_riskDisplay = document.getElementById('non_risk');
 map.on('mousemove', 'puma_pa-fill', (e) => {
 
   map.getCanvas().style.cursor = 'pointer';
-  // Set variables equal to the current feature's magnitude, location, and time
+  // Set variables equal to the current feature
   var PUMANAME = (e.features[0].properties.NAMELSAD10).slice(0, -5);
   var WRK = (e.features[0].state.Total_Blk*1)+(e.features[0].state.Total_Non_Black*1) ;
   var PUMA_ID = e.features[0].id;
@@ -359,12 +358,13 @@ map.on('mousemove', 'puma_pa-fill', (e) => {
 	riskDisplay.textContent = RSK_PCT;
 	blk_riskDisplay.textContent = BLK_PCT;
 	non_riskDisplay.textContent = NON_PCT;
+	//hide or unhide sidebar elements
 	document.getElementById("hover_text").style.visibility = "hidden";
 	document.getElementById("description").style.visibility = "visible";
 	
 	}
 	});
-
+//resetting to empty when mouse leaves an area so the sidebar can reset
       map.on('mouseleave', 'puma_pa-fill', () => {
         if (hoveredStateId) {
           map.setFeatureState({
@@ -387,7 +387,7 @@ map.on('mousemove', 'puma_pa-fill', (e) => {
 		document.getElementById("description").style.visibility = "hidden";
       });
 
-
+//define the columns and how the CSV data is attaching to the mbtiles
       const setStates = (data) => {
         data.forEach((row) => {
           map.setFeatureState({
@@ -418,7 +418,7 @@ map.on('mousemove', 'puma_pa-fill', (e) => {
       }
     }
   })
-  
+//Change initial zoom dependant on of the map is viewed in mobile 
 function mobile_detect() {
 
 if (navigator.userAgent.match(/Mobile/)) {return 5.5;
